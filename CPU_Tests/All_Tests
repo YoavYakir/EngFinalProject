@@ -1,0 +1,62 @@
+# All stress tests used to compare performence
+
+# --------------------------------------------------------------- #
+# Test number 1, generic calculations
+def array_manipulations():
+    for i in range(50):
+        data_list = [0] * (10 ** 8)  # This creates a list with 10 million elements (each element is an integer)
+
+        # Simulate some processing that uses the list
+        for j in range(len(data_list)):
+            data_list[j] = j * 2  # Modify each element
+
+        # Simulate some additional computation
+        result = sum(data_list)
+
+# --------------------------------------------------------------- #
+# Test 2, example from Numba documentation
+def monte_carlo_pi(nsamples):
+    acc = 0
+    for i in range(nsamples):
+        x = random.random()
+        y = random.random()
+        if (x ** 2 + y ** 2) < 1.0:
+            acc += 1
+    return 4.0 * acc / nsamples
+
+# --------------------------------------------------------------- #
+# Test 3, example from PyPy documentation
+def model(x, y):
+    return np.sin(x) + np.cos(y)
+# Define the distribution for the inputs
+distribution = cp.J(cp.Normal(0, 1), cp.Uniform(-1, 1))
+
+# Generate samples
+samples = distribution.sample(10**8)
+
+# Evaluate the model with the samples
+x_samples, y_samples = samples
+evaluations = model(x_samples, y_samples)
+
+# Perform analysis (e.g., calculate the mean and variance of the output)
+expected_value = np.mean(evaluations)
+variance = np.var(evaluations)
+
+print(f"Expected Value: {expected_value}, Variance: {variance}")
+
+# --------------------------------------------------------------- #
+# Test 4, example from Cython documentation
+def stress_test(nb_primes):
+    p = []
+    n = 2
+    while len(p) < nb_primes:
+        # Is n prime?
+        for i in p:
+            if n % i == 0:
+                break
+
+        # If no break occurred in the loop
+        else:
+            p.append(n)
+        n += 1
+    return p
