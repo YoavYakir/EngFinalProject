@@ -43,20 +43,20 @@ def measure_resource_utilization(process_id, interval=1):
         time.sleep(interval)
 
 startTime = time.time()
+prime()
+# # Create a multiprocessing.Process for your function
+# func_process = multiprocessing.Process(target=prime,)
+# func_process.start()
 
-# Create a multiprocessing.Process for your function
-func_process = multiprocessing.Process(target=prime,)
-func_process.start()
+# # Get the process ID of the function
+# process_id = func_process.pid
+# print(f'PID - {process_id}')
+# # Create a multiprocessing.Process for monitoring
+# resource_process = multiprocessing.Process(target=measure_resource_utilization, args=(process_id,))
+# resource_process.start()
 
-# Get the process ID of the function
-process_id = func_process.pid
-print(f'PID - {process_id}')
-# Create a multiprocessing.Process for monitoring
-resource_process = multiprocessing.Process(target=measure_resource_utilization, args=(process_id,))
-resource_process.start()
-
-# Wait for both processes to finish
-func_process.join()
-resource_process.join()
+# # Wait for both processes to finish
+# func_process.join()
+# resource_process.join()
 
 print(f'It took {time.time() - startTime} seconds.')

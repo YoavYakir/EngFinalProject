@@ -1,8 +1,10 @@
+from numba import njit
+import numpy as np
 import multiprocessing
 import time
 import psutil
 
-
+@njit
 def prime():
     nb_primes = 40000
     p = []
@@ -19,6 +21,8 @@ def prime():
         n += 1
     return p
 
+
+
 def measure_resource_utilization(process_id, interval=1):
     cpus = []
     mem = []
@@ -26,26 +30,26 @@ def measure_resource_utilization(process_id, interval=1):
     func_process = psutil.Process(process_id)
 
     while True:
-        # if not len(cpus)%10:
-        # print("Still running monitoring")
+        if not len(cpus)%10:
+            print("Still running monitoring")
         try:
             cpu_percent = (func_process.cpu_percent(interval=interval))/4
             memory_info = func_process.memory_percent()
             cpus.append(cpu_percent)
             mem.append(memory_info) 
         except:
-            print(f'avg cpu {sum(cpus)/len(cpus)}, 1 core avg - {(sum(cpus)/len(cpus))*4} avg mem {sum(mem)/len(mem)}')
+            print(f'avg cpu {sum(cpus)/len(cpus)}, avg mem {sum(mem)/len(mem)}')
             break
         
 
         # print(f"Function CPU Utilization: {cpu_percent/4}%, Memory Usage: {memory_info}%")
-        #time.sleep(interval)
+        time.sleep(interval)
 
 if __name__ == "__main__":
     startTime = time.time()
 
     # Create a multiprocessing.Process for your function
-    func_process = multiprocessing.Process(target=prime,)
+    func_process = multiprocessing.Process(target=prime)
     func_process.start()
 
     # Get the process ID of the function
