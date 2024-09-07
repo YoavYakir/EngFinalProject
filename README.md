@@ -134,17 +134,7 @@ We gathered performance data from all tests and compared the results in several 
 
 ## Conclusions
 
-1. **GPU is Generally Faster for Large Batch Sizes**: We observed that for larger batch sizes (e.g., 1000+), **GPU** consistently outperformed **CPU**, especially when using **Numba** and **Dask + CuDF**.
-   
-2. **Workers Impact Performance but With Diminishing Returns**: Increasing the number of workers improved **GPU** performance, but beyond a certain threshold (e.g., 4 workers), the performance gains were marginal.
-
-3. **Method-Specific Optimizations**:
-   - **Numba** and **Dask + CuDF**: Best suited for **GPU** acceleration and large-scale distributed computation.
-   - **Cython** and **Pythran**: Focused solely on **CPU optimizations** and don’t benefit from GPU resources.
-   
-4. **Batch Size is Critical**: Larger batch sizes generally reduce computation time, particularly when leveraging **GPU** resources.
-
-5. **Prediction of Batch Preparation Time**: Based on the results, we can now predict that for a batch size of 500, **matrix multiplication** using **Numba** will take approximately 1.2 seconds on the **GPU**.
+TBD
 
 ---
 
