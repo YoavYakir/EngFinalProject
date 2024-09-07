@@ -1,5 +1,4 @@
 # CPU/GPU Optimization and Analysis
-## This README.md is referring to the "new_version" folder.
 ## Overview
 
 This project focuses on enhancing the performance of Python programs using various techniques to optimize both **CPU** and **GPU** computations. The process involved experimenting with several methods and tools, testing different configurations (such as batch sizes and workers), and analyzing the results to draw meaningful conclusions.
@@ -51,7 +50,7 @@ Finally, we built a **prediction model** to estimate the time required to proces
 
 Here's an overview of the project structure and a description of each key component:
 ```
-new_version/
+EngFinalProject/
     ├── docs/
     │   ├── setup_cython.md
     │   ├── setup_dask_cudf.md
