@@ -50,7 +50,8 @@ Finally, we built a **prediction model** to estimate the time required to proces
 ## Project Structure
 
 Here's an overview of the project structure and a description of each key component:
-EngFinalProject/
+```
+new_version/
     ├── docs/
     │   ├── setup_cython.md
     │   ├── setup_dask_cudf.md
@@ -78,7 +79,7 @@ EngFinalProject/
     │       ├── run_all_tests.py
     │       └── test_pythran.py
     └── README.md
-
+```
 
 ### Key Files:
 
