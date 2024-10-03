@@ -13,7 +13,7 @@ except ImportError:
     cuda = None
 
 class ResourceMonitor:
-    def __init__(self):
+    def _init_(self):
         self.cpu_usage = []
         self.memory_usage = []
         self.cache_usage = []
@@ -56,7 +56,7 @@ class ResourceMonitor:
         """ Clears cache (page cache, dentries, and inodes) on Linux """
         if platform.system() == "Linux":
             os.system("sync")  # Ensure filesystem buffers are flushed
-            os.system("echo 3 | tee /proc/sys/vm/drop_caches")  # Clear cache
+            os.system("echo 3 | sudo tee /proc/sys/vm/drop_caches")  # Clear cache
             print("Cache cleared.")
 
     def get_system_info(self):
@@ -97,7 +97,6 @@ class ResourceMonitor:
                                 r["GPU"] == system_stats["GPU"] and
                                 r["Run Type"] == system_stats["Run Type"] and
                                 r["Workers"] == workers and
-                                r["Learning rate"] == system_stats["Learning rate"] and
                                 r["Batch Size"] == batch_size), None)
 
         # If the result already exists, overwrite it; otherwise, append the new result
