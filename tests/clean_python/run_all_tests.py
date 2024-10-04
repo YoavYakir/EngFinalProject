@@ -32,7 +32,7 @@ def pca_test(on_gpu, batch_size=100, n_components=2):
         data = cp.random.rand(batch_size, batch_size)
         data_centered = data - cp.mean(data, axis=0)
         cov_matrix = cp.cov(data_centered.T)
-        eigen_values, eigen_vectors = cp.linalg.eig(cov_matrix)
+        eigen_values, eigen_vectors = cp.linalg.eigh(cov_matrix)
         sorted_idx = cp.argsort(eigen_values)[::-1]
         eigen_vectors = eigen_vectors[:, sorted_idx]
         return cp.dot(data_centered, eigen_vectors[:, :n_components])
@@ -40,7 +40,7 @@ def pca_test(on_gpu, batch_size=100, n_components=2):
         data = np.random.rand(batch_size, batch_size)
         data_centered = data - np.mean(data, axis=0)
         cov_matrix = np.cov(data_centered.T)
-        eigen_values, eigen_vectors = np.linalg.eig(cov_matrix)
+        eigen_values, eigen_vectors = np.linalg.eigh(cov_matrix)
         sorted_idx = np.argsort(eigen_values)[::-1]
         return np.dot(data_centered, eigen_vectors[:, :n_components])
 
@@ -146,7 +146,7 @@ def train_test_mlist(on_gpu, workers=1, epochs=10, batch_size=100, learning_rate
 
 
 # Function to run each test and collect results
-def run_test(test_name, test_function, on_gpu=False, workers=1, batch_size=100, filter_size=256, length=256, epochs=110, learning_rate=0.01):
+def run_test(test_name, test_function, on_gpu=True, workers=1, batch_size=100, filter_size=256, length=256, epochs=110, learning_rate=0.01):
     monitor = ResourceMonitor()
     system_info = monitor.get_system_info()
 
@@ -206,7 +206,7 @@ def run_all_tests(batch_size=100):
     # Run all tests on CPU
     for test_name, test_function in tests.items():
         print(f'Running {test_name}, on function {test_function}')
-        run_test(test_name, test_function, on_gpu=False, batch_size=batch_size)
+        run_test(test_name, test_function, on_gpu=True, batch_size=batch_size)
 
     # Run tests on GPU with Nsight profiling
     workers_list = [1, 2, 4, 8]  # Different worker counts for GPU runs

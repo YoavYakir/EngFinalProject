@@ -8,14 +8,16 @@ import os
 try:
     import pycuda.driver as cuda
     import pycuda.autoinit
-    cuda.init()
+    print("Cuda was successfully initialized")
 except ImportError:
+    print("Error initializing GPU, cuda = None")
     cuda = None
 
 class ResourceMonitor:
     def __init__(self):
         self.cpu_usage = []
-        self.memory_usage = []
+        self.memory_usage_percent = []
+        self.memory_usage_mb = []
         self.cache_usage = []
         self.running = False
 
@@ -27,7 +29,9 @@ class ResourceMonitor:
     def _monitor(self):
         while self.running:
             self.cpu_usage.append(psutil.cpu_percent(interval=1))
-            self.memory_usage.append(psutil.virtual_memory().percent)
+            mem_info = psutil.virtual_memory()
+            self.memory_usage_percent.append(mem_info.percent)
+            self.memory_usage_mb.append(mem_info.used / (1024 ** 2))  # Convert memory usage to MB
             self.cache_usage.append(self._get_cache_usage())
             time.sleep(1)
 
@@ -38,7 +42,8 @@ class ResourceMonitor:
     def get_average_usage(self):
         return {
             "Average CPU Usage (%)": sum(self.cpu_usage) / len(self.cpu_usage) if self.cpu_usage else 0,
-            "Average Memory Usage (%)": sum(self.memory_usage) / len(self.memory_usage) if self.memory_usage else 0,
+            "Average Memory Usage (%)": sum(self.memory_usage_percent) / len(self.memory_usage_percent) if self.memory_usage_percent else 0,
+            "Average Memory Usage (MB)": sum(self.memory_usage_mb) / len(self.memory_usage_mb) if self.memory_usage_mb else 0,
             "Average Cache Usage (MB)": sum(self.cache_usage) / len(self.cache_usage) if self.cache_usage else 0
         }
 
