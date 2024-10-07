@@ -168,7 +168,7 @@ def run_test(test_name, test_function, on_gpu=True, workers=1, batch_size=100, f
         result = test_function(on_gpu, workers, epochs, batch_size, learning_rate) 
     else:
         result = test_function()
-
+    
     end_time = time.time()
     monitor.stop_monitoring()
 
