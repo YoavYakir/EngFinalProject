@@ -1,96 +1,192 @@
 import json
 import matplotlib.pyplot as plt
-import numpy as np
+from collections import defaultdict
+from docx import Document
+import os
 
-# Function to analyze results from JSON file and produce graphs
-def analyze_results(file_path):
-    with open(file_path, 'r') as f:
+def analyze_results(results_file, output_folder="analysis_output"):
+    # Load the results JSON file
+    with open(results_file, 'r') as f:
         data = json.load(f)
-    
-    # Collect data for analysis
-    cpu_times = []
-    gpu_times = []
-    batch_sizes = []
-    methods = []
-    workers_list = []
-    run_types = []
 
-    # Collect information from the results
+    # Separate results into CPU and GPU run types
+    cpu_results = defaultdict(lambda: defaultdict(list))
+    gpu_results = defaultdict(lambda: defaultdict(list))
+
+    # Organize data into CPU and GPU structures
     for entry in data:
-        if "Batch Size" in entry:
-            batch_sizes.append(entry["Batch Size"])
-            cpu_times.append(entry.get("CPU Preparation Time", 0))
-            gpu_times.append(entry.get("GPU Processing Time", 0))
-            methods.append(entry.get("Test Name", "Unknown"))
-            workers_list.append(entry.get("Workers", 1))
-            run_types.append(entry.get("Run Type", "CPU"))
+        test_name_parts = entry["Test Name"].split("_")
+        test_method = test_name_parts[0]  # Method name
+        test_name = "_".join(test_name_parts[1:])  # Test name after the method
+        run_type = entry["Run Type"]
 
-    # Plot CPU and GPU times against batch sizes
-    plt.figure()
-    plt.plot(batch_sizes, cpu_times, label="CPU Preparation Time", color="blue")
-    plt.plot(batch_sizes, gpu_times, label="GPU Processing Time", color="green")
-    plt.xlabel("Batch Size")
-    plt.ylabel("Time (seconds)")
-    plt.title("CPU vs GPU Time for Different Batch Sizes")
-    plt.legend()
-    plt.show()
+        # Store in the appropriate section based on run type
+        if run_type == "CPU":
+            cpu_results[test_name][test_method].append({
+                "machine_specs": {
+                    "OS": entry["OS"],
+                    "CPU": entry["CPU"],
+                    "GPU": entry["GPU"].split(",")[0]  # Only take the GPU model
+                },
+                "time": entry["Elapsed Time"],
+                "cache_usage": entry.get("Average Cache Usage (MB)", 0),
+                "ram_usage": entry.get("Average Memory Usage (%)", 0),
+                "cpu_usage": entry.get("Average CPU Usage (%)", 0),
+                "learn_params": {
+                    "Workers": entry.get("Workers", None),
+                    "Batch Size": entry.get("Batch Size", None),
+                    "Learning rate": entry.get("Learning rate", None),
+                    "Epochs": entry.get("Epochs", None),
+                    "Filter Size": entry.get("Filter Size", None)
+                }
+            })
+        elif run_type == "GPU":
+            gpu_results[test_name][test_method].append({
+                "machine_specs": {
+                    "OS": entry["OS"],
+                    "CPU": entry["CPU"],
+                    "GPU": entry["GPU"].split(",")[0]  # Only take the GPU model
+                },
+                "time": entry["Elapsed Time"],
+                "cache_usage": entry.get("Average Cache Usage (MB)", 0),
+                "ram_usage": entry.get("Average Memory Usage (%)", 0),
+                "cpu_usage": entry.get("Average CPU Usage (%)", 0),
+                "learn_params": {
+                    "Workers": entry.get("Workers", None),
+                    "Batch Size": entry.get("Batch Size", None),
+                    "Learning rate": entry.get("Learning rate", None),
+                    "Epochs": entry.get("Epochs", None),
+                    "Filter Size": entry.get("Filter Size", None)
+                }
+            })
 
-    # Analyze effect of workers on GPU time
-    plt.figure()
-    for method in set(methods):
-        method_gpu_times = [gpu_times[i] for i in range(len(gpu_times)) if methods[i] == method and run_types[i] == "GPU"]
-        method_workers = [workers_list[i] for i in range(len(workers_list)) if methods[i] == method and run_types[i] == "GPU"]
-        plt.plot(method_workers, method_gpu_times, label=f"GPU Time for {method}")
+    # Create the output folder if it doesn't exist
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
 
-    plt.xlabel("Number of Workers")
-    plt.ylabel("GPU Processing Time (seconds)")
-    plt.title("Effect of Workers on GPU Processing Time")
-    plt.legend()
-    plt.show()
+    # Create a Word document for the report
+    doc = Document()
+    doc.add_heading("Analysis Report: CPU and GPU Tests", 0)
 
-    # Analyze CPU vs GPU times across different methods
-    plt.figure()
-    for method in set(methods):
-        method_cpu_times = [cpu_times[i] for i in range(len(cpu_times)) if methods[i] == method]
-        method_gpu_times = [gpu_times[i] for i in range(len(gpu_times)) if methods[i] == method]
-        method_batch_sizes = [batch_sizes[i] for i in range(len(batch_sizes)) if methods[i] == method]
-        plt.plot(method_batch_sizes, method_cpu_times, label=f"CPU Time for {method}", linestyle="--")
-        plt.plot(method_batch_sizes, method_gpu_times, label=f"GPU Time for {method}")
+    # Helper function to plot and save graphs
+    def plot_and_save_graph(x_values, y_values, x_label, y_label, title, filename):
+        plt.figure()
+        plt.bar(x_values, y_values, color='blue')
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
+        plt.title(title)
+        plt.tight_layout()
+        plt.savefig(filename)
+        plt.close()
 
-    plt.xlabel("Batch Size")
-    plt.ylabel("Time (seconds)")
-    plt.title("CPU vs GPU Times Across Methods")
-    plt.legend()
-    plt.show()
+    # Function to generate graphs for both CPU and GPU sections
+    def generate_section(test_results, section_name):
+        doc.add_heading(section_name, level=1)
 
-    # Prediction of batch preparation times based on past data
-    def predict_batch_time(batch_size, method_name):
-        matching_entries = [(cpu_times[i], gpu_times[i], batch_sizes[i]) for i in range(len(batch_sizes))
-                            if methods[i] == method_name]
-        if not matching_entries:
-            return None, None
+        for test_name, methods in test_results.items():
+            doc.add_heading(f"Test: {test_name}", level=2)
 
-        # Linear regression on past data
-        cpu_batch_sizes, cpu_times_pred, gpu_times_pred = zip(*matching_entries)
-        cpu_coefficients = np.polyfit(cpu_batch_sizes, cpu_times_pred, 1)
-        gpu_coefficients = np.polyfit(cpu_batch_sizes, gpu_times_pred, 1)
+            method_names = []
+            elapsed_times = []
+            cpu_usages = []
+            cache_usages = []
+            ram_usages = []
 
-        # Predict CPU and GPU times for the given batch size
-        predicted_cpu_time = np.polyval(cpu_coefficients, batch_size)
-        predicted_gpu_time = np.polyval(gpu_coefficients, batch_size)
-        return predicted_cpu_time, predicted_gpu_time
+            for method, entries in methods.items():
+                method_names.append(method)
+                elapsed_times.append(entries[0]["time"])
+                cpu_usages.append(entries[0]["cpu_usage"])
+                cache_usages.append(entries[0]["cache_usage"])
+                ram_usages.append(entries[0]["ram_usage"])
 
-    # Example prediction for batch preparation time
-    batch_size_to_predict = 500
-    method_to_predict = "matrix_multiplication_test"
-    predicted_cpu, predicted_gpu = predict_batch_time(batch_size_to_predict, method_to_predict)
-    
-    if predicted_cpu is not None and predicted_gpu is not None:
-        print(f"Predicted CPU time for batch size {batch_size_to_predict} in method {method_to_predict}: {predicted_cpu:.2f} seconds")
-        print(f"Predicted GPU time for batch size {batch_size_to_predict} in method {method_to_predict}: {predicted_gpu:.2f} seconds")
-    else:
-        print(f"No matching data found for method {method_to_predict}")
+            # Graph: Elapsed Time for all methods
+            graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_elapsed_time.png")
+            plot_and_save_graph(method_names, elapsed_times, "Methods", "Elapsed Time (seconds)",
+                                f"Elapsed Time for {test_name}", graph_filename)
+            doc.add_heading(f"Elapsed Time for {test_name} (All Methods)", level=3)
+            doc.add_picture(graph_filename)
 
-# Example usage
-if __name__ == "__main__":
-    analyze_results("../results/results.json")
+            # Graph: CPU Usage for all methods
+            graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_cpu_usage.png")
+            plot_and_save_graph(method_names, cpu_usages, "Methods", "CPU Usage (%)",
+                                f"CPU Usage for {test_name}", graph_filename)
+            doc.add_heading(f"CPU Usage for {test_name} (All Methods)", level=3)
+            doc.add_picture(graph_filename)
+
+            # Graph: Cache Usage for all methods
+            graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_cache_usage.png")
+            plot_and_save_graph(method_names, cache_usages, "Methods", "Cache Usage (MB)",
+                                f"Cache Usage for {test_name}", graph_filename)
+            doc.add_heading(f"Cache Usage for {test_name} (All Methods)", level=3)
+            doc.add_picture(graph_filename)
+
+            # Graph: RAM Usage for all methods
+            graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_ram_usage.png")
+            plot_and_save_graph(method_names, ram_usages, "Methods", "RAM Usage (%)",
+                                f"RAM Usage for {test_name}", graph_filename)
+            doc.add_heading(f"RAM Usage for {test_name} (All Methods)", level=3)
+            doc.add_picture(graph_filename)
+
+            # Generate parameter-specific graphs for batch size, filter size, etc.
+            if any(key in test_name for key in ["mlist", "matrix_multiplication", "pca", "svd"]):
+                batch_size_values = [entry["learn_params"]["Batch Size"] for entry in entries if entry["learn_params"]["Batch Size"] is not None]
+                if batch_size_values:
+                    graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_batch_size_elapsed_time.png")
+                    plot_and_save_graph(batch_size_values, elapsed_times, "Batch Size", "Elapsed Time (seconds)",
+                                        f"Elapsed Time vs Batch Size for {test_name}", graph_filename)
+                    doc.add_heading(f"Elapsed Time vs Batch Size for {test_name}", level=3)
+                    doc.add_picture(graph_filename)
+
+            if any(key in test_name for key in ["convolution", "fft"]):
+                filter_size_values = [entry["learn_params"]["Filter Size"] for entry in entries if entry["learn_params"]["Filter Size"] is not None]
+                if filter_size_values:
+                    graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_filter_size_elapsed_time.png")
+                    plot_and_save_graph(filter_size_values, elapsed_times, "Filter Size", "Elapsed Time (seconds)",
+                                        f"Elapsed Time vs Filter Size for {test_name}", graph_filename)
+                    doc.add_heading(f"Elapsed Time vs Filter Size for {test_name}", level=3)
+                    doc.add_picture(graph_filename)
+
+            # For mlist: Workers, Learning Rate, Epochs specific graphs
+            if "mlist" in test_name:
+                workers_values = [entry["learn_params"]["Workers"] for entry in entries if entry["learn_params"]["Workers"] is not None]
+                learning_rate_values = [entry["learn_params"]["Learning rate"] for entry in entries if entry["learn_params"]["Learning rate"] is not None]
+                epochs_values = [entry["learn_params"]["Epochs"] for entry in entries if entry["learn_params"]["Epochs"] is not None]
+
+                # Workers graph
+                if workers_values:
+                    graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_workers_elapsed_time.png")
+                    plot_and_save_graph(workers_values, elapsed_times, "Workers", "Elapsed Time (seconds)",
+                                        f"Elapsed Time vs Workers for {test_name}", graph_filename)
+                    doc.add_heading(f"Elapsed Time vs Workers for {test_name}", level=3)
+                    doc.add_picture(graph_filename)
+
+                # Learning Rate graph
+                if learning_rate_values:
+                    graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_learning_rate_elapsed_time.png")
+                    plot_and_save_graph(learning_rate_values, elapsed_times, "Learning Rate", "Elapsed Time (seconds)",
+                                        f"Elapsed Time vs Learning Rate for {test_name}", graph_filename)
+                    doc.add_heading(f"Elapsed Time vs Learning Rate for {test_name}", level=3)
+                    doc.add_picture(graph_filename)
+
+                # Epochs graph
+                if epochs_values:
+                    graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_epochs_elapsed_time.png")
+                    plot_and_save_graph(epochs_values, elapsed_times, "Epochs", "Elapsed Time (seconds)",
+                                        f"Elapsed Time vs Epochs for {test_name}", graph_filename)
+                    doc.add_heading(f"Elapsed Time vs Epochs for {test_name}", level=3)
+                    doc.add_picture(graph_filename)
+
+    # Generate CPU section
+    generate_section(cpu_results, "CPU")
+
+    # Generate GPU section
+    generate_section(gpu_results, "GPU")
+
+    # Save the document
+    output_docx = os.path.join(output_folder, "analysis_report.docx")
+    doc.save(output_docx)
+
+    print(f"Analysis complete! Report saved to {output_docx}")
+
+os.system("rm -rf EngFinalProject/analysis_output")
+analyze_results("EngFinalProject/results/results.json", "EngFinalProject/analysis_output")

@@ -408,33 +408,27 @@ def run_all_tests():
 
     # Run all tests on CPU
     for test_name, (test_function_cpu, test_function_gpu) in tests.items():
-        try: 
-            if test_name == "train_test_mlist":
-                # For train_test_mlist, run with different batch sizes and workers
-                for batch_size in [256, 512, 1024]:  # Define different batch sizes
-                    for workers in [1, 2, 4, 8]:  # Define different worker counts
-                        print(f'Running {test_name} on CPU with batch size {batch_size} and {workers} workers...')
-                        run_test(test_name, test_function_cpu, test_function_gpu, on_gpu=False, workers=workers, batch_size=batch_size)
-            else:
-                print(f'Running {test_name} on CPU...')
-                run_test(test_name, test_function_cpu, test_function_gpu, on_gpu=False, batch_size=1024)
-        except:
-            print(f"an error occured while running {test_name} on CPU")
+        if test_name == "train_test_mlist":
+            # For train_test_mlist, run with different batch sizes and workers
+            for batch_size in [256, 512, 1024]:  # Define different batch sizes
+                for workers in [1, 2, 4, 8]:  # Define different worker counts
+                    print(f'Running {test_name} on CPU with batch size {batch_size} and {workers} workers...')
+                    run_test(test_name, test_function_cpu, test_function_gpu, on_gpu=False, workers=workers, batch_size=batch_size)
+        else:
+            print(f'Running {test_name} on CPU...')
+            run_test(test_name, test_function_cpu, test_function_gpu, on_gpu=False, batch_size=1024)
 
     # Run all tests on GPU
     for test_name, (test_function_cpu, test_function_gpu) in tests.items():
-        try: 
-            if test_name == "train_test_mlist":
-                # For train_test_mlist, run with different batch sizes and workers
-                for batch_size in [256, 512, 1024]:  # Define different batch sizes
-                    for workers in [1, 2, 4, 8]:  # Define different worker counts
-                        print(f'Running {test_name} on GPU with batch size {batch_size} and {workers} workers...')
-                        run_test(test_name, test_function_cpu, test_function_gpu, on_gpu=True, workers=workers, batch_size=batch_size)
-            else:
-                print(f'Running {test_name} on GPU...')
-                run_test(test_name, test_function_cpu, test_function_gpu, on_gpu=True, batch_size=1024)
-        except:
-            print(f"an error occured while running {test_name} on GPU")
+        if test_name == "train_test_mlist":
+            # For train_test_mlist, run with different batch sizes and workers
+            for batch_size in [256, 512, 1024]:  # Define different batch sizes
+                for workers in [1, 2, 4, 8]:  # Define different worker counts
+                    print(f'Running {test_name} on GPU with batch size {batch_size} and {workers} workers...')
+                    run_test(test_name, test_function_cpu, test_function_gpu, on_gpu=True, workers=workers, batch_size=batch_size)
+        else:
+            print(f'Running {test_name} on GPU...')
+            run_test(test_name, test_function_cpu, test_function_gpu, on_gpu=True, batch_size=1024)
 
 
 if __name__ == "__main__":
