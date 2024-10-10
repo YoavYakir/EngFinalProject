@@ -81,11 +81,12 @@ class ResourceMonitor:
         system_info["GPU"] = gpu_info
         return system_info
 
-    def save_results(self, system_stats, test_name, result_file_path, workers=1, batch_size=0):
-        # Add test name, workers, and batch size to the results
+    def save_results(self, system_stats, test_name, result_file_path, workers=1, batch_size=0, epochs=10):
+        # Add test name, workers, batch size, and epochs to the results
         system_stats["Test Name"] = test_name
         system_stats["Workers"] = workers
         system_stats["Batch Size"] = batch_size
+        system_stats["Epochs"] = epochs  # Add epochs to system stats
 
         # Load existing results, handle empty or invalid JSON files
         try:
@@ -94,7 +95,7 @@ class ResourceMonitor:
         except (FileNotFoundError, json.JSONDecodeError):
             results = []  # Initialize with an empty list if file is not found or invalid
 
-        # Check if there's an existing result with the same OS, CPU, GPU, Run Type, Workers, and Batch Size
+        # Check if there's an existing result with the same OS, CPU, GPU, Run Type, Workers, Batch Size, and Epochs
         existing_result = next((r for r in results if
                                 r["Test Name"] == test_name and
                                 r["OS"] == system_stats["OS"] and
@@ -102,8 +103,8 @@ class ResourceMonitor:
                                 r["GPU"] == system_stats["GPU"] and
                                 r["Run Type"] == system_stats["Run Type"] and
                                 r["Workers"] == workers and
-                                r["Learning rate"] == system_stats["Learning rate"] and
-                                r["Batch Size"] == batch_size), None)
+                                r["Batch Size"] == batch_size and
+                                r["Epochs"] == epochs), None)
 
         # If the result already exists, overwrite it; otherwise, append the new result
         if existing_result:

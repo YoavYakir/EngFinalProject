@@ -5,95 +5,171 @@ import cupy as cp
 import cudf
 from dask_cuda import LocalCUDACluster
 from dask.distributed import Client
-from ...scripts.utility_functions import ResourceMonitor
+from dask import delayed
+from tensorflow.keras.datasets import mnist
+from ...scripts.utility_functions import ResourceMonitor  # Adjust the path accordingly
 
-# Initialize Dask client to manage CPU/GPU tasks
-cluster = LocalCUDACluster()
-client = Client(cluster)
+# Initialize the Dask client with CUDA support (if available)
+def initialize_dask_client(use_gpu=True):
+    if use_gpu:
+        cluster = LocalCUDACluster()
+    else:
+        cluster = None  # Default CPU-based Dask cluster
+    client = Client(cluster)
+    return client
 
-# Function to simulate CPU-based data preparation using Dask
-def prepare_data(batch_size):
-    data = da.random.random((batch_size, batch_size), chunks=(batch_size // 2, batch_size // 2))
-    return data.compute()
-
-# Function to simulate GPU-based data processing using CuPy and CuDF
-def process_data_on_gpu(data):
-    gpu_data = cp.asarray(data)
-    result = cp.dot(gpu_data, gpu_data.T)  # Example matrix multiplication on the GPU
-    return cp.asnumpy(result)
-
-# PCA Test (GPU using CuPy and CuDF)
-def pca_test(batch_size=100, n_components=2):
-    data = cp.random.rand(batch_size, batch_size)
-    data_centered = data - cp.mean(data, axis=0)
-    cov_matrix = cp.cov(data_centered.T)
-    eigen_values, eigen_vectors = cp.linalg.eig(cov_matrix)
-    sorted_idx = cp.argsort(eigen_values)[::-1]
-    return cp.dot(data_centered, eigen_vectors[:, :n_components])
-
-# SVD Test (GPU using CuPy)
-def svd_test(batch_size=100):
-    data = cp.random.rand(batch_size, batch_size)
-    return cp.linalg.svd(data, full_matrices=False)
-
-# GPU Stress Test (Intensive matrix multiplication to stress GPU)
-def gpu_stress_test(batch_size=100):
-    data = cp.random.rand(batch_size, batch_size)
-    result = cp.dot(data, data.T)  # Stress the GPU with large matrix operations
+# Iterative Test (using Dask for parallelization)
+@delayed
+def iterative_test():
+    result = 0
+    for i in range(1000000):
+        result += cp.random.randint(0, 10)
     return result
 
-# Function to run the full pipeline: data preparation (CPU) + processing (GPU)
-def run_pipeline(batch_size, test_function):
-    # Start monitoring resources
-    monitor = ResourceMonitor()
-    monitor.start_monitoring()
+# Matrix Multiplication Test (using Dask and Dask-CuPy)
+@delayed
+def matrix_multiplication_test(on_gpu, batch_size=100):
+    if on_gpu:
+        A = da.from_array(cp.random.rand(batch_size, batch_size), chunks=(batch_size // 10, batch_size // 10))
+        B = da.from_array(cp.random.rand(batch_size, batch_size), chunks=(batch_size // 10, batch_size // 10))
+        return da.dot(A, B).compute()
+    else:
+        A = da.from_array(cp.random.rand(batch_size, batch_size), chunks=(batch_size // 10, batch_size // 10))
+        B = da.from_array(cp.random.rand(batch_size, batch_size), chunks=(batch_size // 10, batch_size // 10))
+        return da.dot(A, B).compute()
 
-    start_time = time.time()
+# PCA Test (using Dask for parallel processing)
+@delayed
+def pca_test(on_gpu, batch_size=100, n_components=2):
+    if on_gpu:
+        data = da.from_array(cp.random.rand(batch_size, batch_size), chunks=(batch_size // 10, batch_size // 10))
+        data_centered = data - data.mean(axis=0)
+        cov_matrix = da.cov(data_centered.T)
+        eigen_values, eigen_vectors = da.linalg.eigh(cov_matrix)
+        sorted_idx = da.argsort(eigen_values)[::-1]
+        eigen_vectors = eigen_vectors[:, sorted_idx]
+        return da.dot(data_centered, eigen_vectors[:, :n_components]).compute()
+    else:
+        data = da.from_array(cp.random.rand(batch_size, batch_size), chunks=(batch_size // 10, batch_size // 10))
+        data_centered = data - data.mean(axis=0)
+        cov_matrix = da.cov(data_centered.T)
+        eigen_values, eigen_vectors = da.linalg.eigh(cov_matrix)
+        sorted_idx = da.argsort(eigen_values)[::-1]
+        return da.dot(data_centered, eigen_vectors[:, :n_components]).compute()
+
+# SVD Test (using Dask for parallel SVD computation)
+@delayed
+def svd_test(on_gpu, batch_size=100):
+    if on_gpu:
+        data = da.from_array(cp.random.rand(batch_size, batch_size), chunks=(batch_size // 10, batch_size // 10))
+        return da.linalg.svd(data, full_matrices=False).compute()
+    else:
+        data = da.from_array(cp.random.rand(batch_size, batch_size), chunks=(batch_size // 10, batch_size // 10))
+        return da.linalg.svd(data, full_matrices=False).compute()
+
+# Convolution Test (using Dask for parallel convolution)
+@delayed
+def convolution_test(on_gpu, filter_size=256, sample_rate=44100):
+    t = da.linspace(0, 1, sample_rate, chunks=sample_rate // 10)
+    frequency = 440
+    sound_filter = da.sin(2 * cp.pi * frequency * t)
+    filter_2d = sound_filter[:9].reshape((3, 3))
+
+    if on_gpu:
+        data = da.from_array(cp.random.rand(filter_size, filter_size), chunks=(filter_size // 10, filter_size // 10))
+        result = da.empty_like(data)
+        for i in range(1, data.shape[0] - 1):
+            for j in range(1, data.shape[1] - 1):
+                result[i, j] = da.sum(data[i - 1:i + 2, j - 1:j + 2] * filter_2d).compute()
+        return result
+    else:
+        data = da.from_array(cp.random.rand(filter_size, filter_size), chunks=(filter_size // 10, filter_size // 10))
+        result = da.empty_like(data)
+        for i in range(1, data.shape[0] - 1):
+            for j in range(1, data.shape[1] - 1):
+                result[i, j] = da.sum(data[i - 1:i + 2, j - 1:j + 2] * filter_2d).compute()
+        return result
+
+# FFT Test (using Dask for parallel FFT computation)
+@delayed
+def fft_test(on_gpu, length=256):
+    if on_gpu:
+        data = da.from_array(cp.random.rand(length), chunks=(length // 10))
+        return da.fft.fft(data).compute()
+    else:
+        data = da.from_array(cp.random.rand(length), chunks=(length // 10))
+        return da.fft.fft(data).compute()
+
+# MNIST Test using Dask (CPU and GPU support)
+@delayed
+def mnist_test(on_gpu, workers=1, epochs=10, batch_size=256, learning_rate=0.01, model_size='small'):
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+    if on_gpu:
+        x_train = da.from_array(cp.array(x_train / 255.0), chunks=(batch_size, 28, 28))
+        x_test = da.from_array(cp.array(x_test / 255.0), chunks=(batch_size, 28, 28))
+    else:
+        x_train = da.from_array(x_train / 255.0, chunks=(batch_size, 28, 28))
+        x_test = da.from_array(x_test / 255.0, chunks=(batch_size, 28, 28))
+
+    # Train a simple neural network (Dask-compatible)
+    model = Sequential([
+        Flatten(input_shape=(28, 28)),
+        Dense(128, activation='relu'),
+        Dense(10, activation='softmax')
+    ])
+
+    model.compile(optimizer=Adam(learning_rate=learning_rate), loss='categorical_crossentropy', metrics=['accuracy'])
+    history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, workers=workers, use_multiprocessing=True)
     
-    # Step 1: Data Preparation (CPU)
-    prepared_data = prepare_data(batch_size)
-    cpu_time = time.time() - start_time
+    loss, accuracy = model.evaluate(x_test, y_test)
+    return loss, accuracy
 
-    # Step 2: Data Processing (GPU) with the provided test function
-    gpu_start_time = time.time()
-    processed_data = test_function(batch_size)
-    gpu_time = time.time() - gpu_start_time
+# Function to run each test and collect results
+def run_test(test_name, test_function, on_gpu=True, **kwargs):
+    monitor = ResourceMonitor()
+    system_info = monitor.get_system_info()
 
-    # Stop monitoring
+    # Start Dask monitoring and testing
+    monitor.start_monitoring()
+    start_time = time.time()
+
+    # Run the Dask-delayed test
+    result = test_function(on_gpu, **kwargs).compute()
+
+    end_time = time.time()
     monitor.stop_monitoring()
+
+    elapsed_time = end_time - start_time
     average_usage = monitor.get_average_usage()
 
-    # Collect resource usage stats
-    system_info = monitor.get_system_info()
+    # Collect and save the results with method name "dask"
     system_stats = {
         **system_info,
-        "Batch Size": batch_size,
-        "CPU Preparation Time": cpu_time,
-        "GPU Processing Time": gpu_time,
+        "Run Type": "GPU" if on_gpu else "CPU",
+        "Method": "dask",  # Add the method name as "dask"
+        "Elapsed Time": elapsed_time,
         **average_usage
     }
 
-    # Save results
-    monitor.save_results(system_stats, f"batch_{batch_size}_test", "../../results/results.json", batch_size=batch_size)
-    return cpu_time, gpu_time
+    monitor.save_results(system_stats, f"dask_{test_name}", "./EngFinalProject/results/results.json")
 
-# Run different tests
-def run_all_tests(batch_size):
-    test_functions = {
-        "Matrix Multiplication": process_data_on_gpu,
-        "PCA": pca_test,
-        "SVD": svd_test,
-        "GPU Stress Test": gpu_stress_test
+# Function to run all tests
+def run_all_tests(on_gpu=True):
+    tests = {
+        "iterative_test": iterative_test,
+        "matrix_multiplication_test": matrix_multiplication_test,
+        "pca_test": pca_test,
+        "svd_test": svd_test,
+        "convolution_test": convolution_test,
+        "fft_test": fft_test,
+        "mnist_test": mnist_test
     }
 
-    for test_name, test_function in test_functions.items():
-        print(f"Running {test_name} with batch size: {batch_size}")
-        run_pipeline(batch_size, test_function)
+    for test_name, test_function in tests.items():
+        print(f'Running {test_name}')
+        run_test(test_name, test_function, on_gpu=on_gpu, batch_size=256)
 
-# Run the pipeline
 if __name__ == "__main__":
-    batch_sizes = [100, 500, 1000]  # Example batch sizes for testing
-
-    for batch_size in batch_sizes:
-        print(f"Running tests for batch size: {batch_size}")
-        run_all_tests(batch_size)
+    client = initialize_dask_client(use_gpu=True)  # Set `use_gpu=False` for CPU
+    run_all_tests(on_gpu=True)
