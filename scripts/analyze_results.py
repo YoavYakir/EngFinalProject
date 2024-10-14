@@ -71,10 +71,10 @@ def analyze_results(results_file, output_folder="analysis_output"):
     def add_page_break():
         doc.add_page_break()
 
-    # Helper function to plot and save graphs
-    def plot_and_save_graph(x_values, y_values, x_label, y_label, title, filename):
+    # Helper function to plot and save bar graphs
+    def plot_and_save_bar_graph(x_values, y_values, x_label, y_label, title, filename):
         plt.figure()
-        plt.plot(x_values, y_values, marker='o', color='blue')
+        plt.bar(x_values, y_values, color='blue')
         plt.xlabel(x_label)
         plt.ylabel(y_label)
         plt.title(title)
@@ -112,68 +112,34 @@ def analyze_results(results_file, output_folder="analysis_output"):
 
                 # Generate graphs based on MNIST parameters (only for MNIST)
                 if "mnist" in test_name.lower():
-                    # Workers vs Performance Graphs
                     if workers_values:
-                        # Generate images and save to temp files
                         images = []
                         graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_{method}_workers_vs_time.png")
-                        plot_and_save_graph(workers_values, elapsed_times, "Workers", "Elapsed Time (seconds)", f"Elapsed Time vs Workers for {test_name} ({method})", graph_filename)
+                        plot_and_save_bar_graph(workers_values, elapsed_times, "Workers", "Elapsed Time (seconds)", f"Elapsed Time vs Workers for {test_name} ({method})", graph_filename)
                         images.append(graph_filename)
 
                         graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_{method}_workers_vs_cache.png")
-                        plot_and_save_graph(workers_values, cache_usages, "Workers", "Cache Usage (MB)", f"Cache Usage vs Workers for {test_name} ({method})", graph_filename)
+                        plot_and_save_bar_graph(workers_values, cache_usages, "Workers", "Cache Usage (MB)", f"Cache Usage vs Workers for {test_name} ({method})", graph_filename)
                         images.append(graph_filename)
 
                         # Insert images side by side in the document
                         insert_images_side_by_side(images, doc)
-
-                        # Add page break for next graph section
                         add_page_break()
 
-                    # Batch Size vs Performance Graphs
                     if batch_size_values:
                         images = []
                         graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_{method}_batch_size_vs_time.png")
-                        plot_and_save_graph(batch_size_values, elapsed_times, "Batch Size", "Elapsed Time (seconds)", f"Elapsed Time vs Batch Size for {test_name} ({method})", graph_filename)
+                        plot_and_save_bar_graph(batch_size_values, elapsed_times, "Batch Size", "Elapsed Time (seconds)", f"Elapsed Time vs Batch Size for {test_name} ({method})", graph_filename)
                         images.append(graph_filename)
 
                         graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_{method}_batch_size_vs_ram.png")
-                        plot_and_save_graph(batch_size_values, ram_usages, "Batch Size", "RAM Usage (%)", f"RAM Usage vs Batch Size for {test_name} ({method})", graph_filename)
+                        plot_and_save_bar_graph(batch_size_values, ram_usages, "Batch Size", "RAM Usage (%)", f"RAM Usage vs Batch Size for {test_name} ({method})", graph_filename)
                         images.append(graph_filename)
 
-                        # Insert images side by side
                         insert_images_side_by_side(images, doc)
-
-                        # Add page break for next graph section
                         add_page_break()
 
-                    # Learning Rate vs Performance Graphs
-                    if learning_rate_values:
-                        images = []
-                        graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_{method}_learning_rate_vs_time.png")
-                        plot_and_save_graph(learning_rate_values, elapsed_times, "Learning Rate", "Elapsed Time (seconds)", f"Elapsed Time vs Learning Rate for {test_name} ({method})", graph_filename)
-                        images.append(graph_filename)
-
-                        # Insert images side by side
-                        insert_images_side_by_side([graph_filename], doc)
-
-                        # Add page break for next graph section
-                        add_page_break()
-
-                    # Epochs vs Performance Graphs
-                    if epochs_values:
-                        images = []
-                        graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_{method}_epochs_vs_time.png")
-                        plot_and_save_graph(epochs_values, elapsed_times, "Epochs", "Elapsed Time (seconds)", f"Elapsed Time vs Epochs for {test_name} ({method})", graph_filename)
-                        images.append(graph_filename)
-
-                        # Insert images side by side
-                        insert_images_side_by_side([graph_filename], doc)
-
-                        # Add page break for next section
-                        add_page_break()
-
-                # For non-MNIST tests, graph based on methods only
+                # For non-MNIST tests, compare methods
                 else:
                     method_names = []
                     avg_times = []
@@ -181,7 +147,6 @@ def analyze_results(results_file, output_folder="analysis_output"):
                     avg_ram_usages = []
                     avg_cpu_usages = []
 
-                    # Collect metrics across methods
                     for method, entries in methods.items():
                         method_names.append(method)
                         avg_time = sum(entry["time"] for entry in entries) / len(entries)
@@ -194,32 +159,17 @@ def analyze_results(results_file, output_folder="analysis_output"):
                         avg_ram_usages.append(avg_ram_usage)
                         avg_cpu_usages.append(avg_cpu_usage)
 
-                    # Elapsed Time
                     images = []
                     graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_elapsed_time.png")
-                    plot_and_save_graph(method_names, avg_times, "Methods", "Elapsed Time (seconds)",
-                                        f"Elapsed Time for {test_name}", graph_filename)
+                    plot_and_save_bar_graph(method_names, avg_times, "Methods", "Elapsed Time (seconds)",
+                                            f"Elapsed Time for {test_name}", graph_filename)
                     images.append(graph_filename)
 
-                    # Cache Usage
                     graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_cache_usage.png")
-                    plot_and_save_graph(method_names, avg_cache_usages, "Methods", "Cache Usage (MB)",
-                                        f"Cache Usage for {test_name}", graph_filename)
+                    plot_and_save_bar_graph(method_names, avg_cache_usages, "Methods", "Cache Usage (MB)",
+                                            f"Cache Usage for {test_name}", graph_filename)
                     images.append(graph_filename)
 
-                    # RAM Usage
-                    graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_ram_usage.png")
-                    plot_and_save_graph(method_names, avg_ram_usages, "Methods", "RAM Usage (%)",
-                                        f"RAM Usage for {test_name}", graph_filename)
-                    images.append(graph_filename)
-
-                    # CPU Usage
-                    graph_filename = os.path.join(output_folder, f"{section_name}_{test_name}_cpu_usage.png")
-                    plot_and_save_graph(method_names, avg_cpu_usages, "Methods", "CPU Usage (%)",
-                                        f"CPU Usage for {test_name}", graph_filename)
-                    images.append(graph_filename)
-
-                    # Insert the images side by side and add a page break for the next test
                     insert_images_side_by_side(images, doc)
                     add_page_break()
 
