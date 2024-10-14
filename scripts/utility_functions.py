@@ -88,10 +88,10 @@ class ResourceMonitor:
         system_stats["Batch Size"] = batch_size
         system_stats["Epochs"] = epochs  # Add epochs to system stats
 
-        # Load existing results, handle empty or invalid JSON files
+        # Load existing results, handle empty or invalid JSON batch_sizefiles
         try:
             with open(result_file_path, "r") as file:
-                results = json.load(file)
+                results = json.load(file)  # Load previous results
         except (FileNotFoundError, json.JSONDecodeError):
             results = []  # Initialize with an empty list if file is not found or invalid
 
@@ -104,14 +104,22 @@ class ResourceMonitor:
                                 r["Run Type"] == system_stats["Run Type"] and
                                 r["Workers"] == workers and
                                 r["Batch Size"] == batch_size and
+                                r["Matrix Size"] == system_stats["Matrix Size"] and
+                                r["Filter Size"] == system_stats["Filter Size"] and
+                                r["Sample Rate"] == system_stats["Sample Rate"] and
+                                r["Data Type"] == system_stats["Data Type"] and
+                                r["FFT Length"] == system_stats["FFT Length"] and
+                                r["Learning rate"] == system_stats["Learning rate"] and
                                 r["Epochs"] == epochs), None)
 
         # If the result already exists, overwrite it; otherwise, append the new result
         if existing_result:
+            # Update existing result
             results = [r if r != existing_result else system_stats for r in results]
         else:
+            # Append the new result
             results.append(system_stats)
 
         # Save updated results back to the JSON file
         with open(result_file_path, "w") as file:
-            json.dump(results, file, indent=4)
+            json.dump(results, file, indent=4)  # Write all results, including the new one
