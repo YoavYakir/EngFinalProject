@@ -1,12 +1,15 @@
 import pandas as pd
 import numpy as np
+import os
+
+cwd = os.curdir()
 
 # Load JSON files
-json_path1 = r"C:\Users\User\Downloads\clean_cpu_2710.json"
+json_path1 = f"{cwd}/../results/gtx2080/cpu/clean.json"
 df = pd.read_json(json_path1)
-json_path2 = r"C:\Users\User\Downloads\numba_cpu_2710.json"
+json_path2 = f"{cwd}/../results/gtx2080/cpu/clean.json"
 df2 = pd.read_json(json_path2)
-json_path3 = r"C:\Users\User\Downloads\pythran_cpu2710.json"
+json_path3 = f"{cwd}/../results/gtx2080/cpu/clean.json"
 df3 = pd.read_json(json_path3)
 
 # Concatenate the DataFrames
